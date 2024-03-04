@@ -2,6 +2,12 @@
 Variational Auto Encoder and friends...
 
 
+### Citations
+
+A Style-Based Generator Architecture for Generative Adversarial Networks
+    Tero Karras (NVIDIA), Samuli Laine (NVIDIA), Timo Aila (NVIDIA)
+    http://stylegan.xyz/paper
+
 ### License
 
 Shield: [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
