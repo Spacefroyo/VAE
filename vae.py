@@ -18,45 +18,38 @@ import torchvision.utils as vutils
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Set random seed for reproducibility
-manualSeed = 999
-print("Random Seed: ", manualSeed)
-random.seed(manualSeed)
-torch.manual_seed(manualSeed)
-torch.use_deterministic_algorithms(True) # Needed for reproducible results
+def reshape(shape):
+    return lambda x : x.reshape(shape)
 
-# Number of workers for dataloader
-workers = 0
+inverse_layer_map = {
+    nn.ReLU:                        lambda          **kwargs : nn.ReLU(),
+    nn.LeakyReLU:                   lambda x,       **kwargs : nn.LeakyReLU(x.negative_slope),
+    nn.Linear:                      lambda x,       **kwargs : nn.Linear(x.out_features, x.in_features),
+    nn.LazyLinear:                  lambda x,shape, **kwargs : nn.Linear(x.out_features, np.prod(shape)),
+    nn.Conv2d:                      lambda x,       **kwargs : nn.ConvTranspose2d(x.out_channels, x.in_channels, x.kernel_size, x.stride),
+    nn.Flatten:                     lambda shape,   **kwargs : nn.Unflatten(1, shape[1:])
+}
+def invert(layers, input_shape=(1, 3, 200, 200)):
+    example = torch.Tensor(np.zeros(input_shape))
+    inverse_layers = []
+    for layer in layers:
+        inverse = inverse_layer_map[type(layer)](x=layer, shape=example.shape)
+        inverse_layers.append(inverse)
 
-# Batch size during training
-batch_size = 128
+        example = layer.to('cpu')(example)
 
-# Number of channels in the training images. For color images this is 3
-nc = 3
+    return reversed(inverse_layers), example.shape
+    
+class Autoencoder(nn.Module):
+    def __init__(self, layers):
+        super(Autoencoder, self).__init__()
+        inverse_layers, self.z_shape = invert(layers)
 
-# Number of training epochs
-num_epochs = 5
+        self.encoder = nn.Sequential(*layers)
+        self.decoder = nn.Sequential(*inverse_layers)
 
-# Learning rate for optimizers
-lr = 0.0002
-
-# Beta1 hyperparameter for Adam optimizers
-beta1 = 0.5
-
-# Number of GPUs available. Use 0 for CPU mode.
-ngpu = 1
-
-# Create the dataloader
-dataloader = torch.utils.data.DataLoader(UTKFaceDataset(), batch_size=batch_size,
-                                        shuffle=False, num_workers=workers)
-
-# Decide which device we want to run on
-device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
-
-# Plot some training images
-real_batch = next(iter(dataloader))
-plt.figure(figsize=(8,8))
-plt.axis("off")
-plt.title("Training Images")
-plt.imshow(np.transpose(vutils.make_grid(real_batch[0].to(device)[:64], padding=2, normalize=True).cpu(),(1,2,0)))
-plt.show()
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        
+        return x
