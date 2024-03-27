@@ -1,22 +1,13 @@
 import numpy as np
-import pandas as pd
 
-from Datasets.utk_face import UTKFaceDataset
-
-#%matplotlib inline
-import argparse
-import os
-import random
 import torch
 import torch.nn as nn
 import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
-import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torchvision.utils as vutils
 import numpy as np
-import matplotlib.pyplot as plt
 
 device = torch.device("mps")
     
